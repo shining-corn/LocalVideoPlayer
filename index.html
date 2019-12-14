@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Local Video Player</title>
+
+    <style>
+        .video {
+            width: 100%;
+            height: 100%;
+        }
+
+        .video-frame {
+            overflow: hidden;
+            resize: both;
+            padding: 10px;
+            box-sizing: border-box;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="video-frame">
+        <video id="video" class="video" loop controls></video>
+    </div>
+
+    <div>
+        <input id="fileSelector" type="file" accept="video/*"/>
+    </div>
+
+    再生速度
+    <select id="playbackRate">
+        <option value="0.5">0.5</option>
+        <option value="1" selected>1</option>
+        <option value="1.5">1.5</option>
+        <option value="2">2</option>
+    </select>
+
+    <script>
+        function formatVideoTime(time) {
+            const hours = Math.floor(time / 3600);
+            const minutes = `${Math.floor((time / 60) % 3600)}`.padStart(2, '0');
+            const seconds = `${Math.floor(time % 60)}`.padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
+        }
+
+        (() => {
+            const tagVideo = document.getElementById('video');
+            const tagFileSelector = document.getElementById('fileSelector');
+            const tagPlaybackRate = document.getElementById('playbackRate');
+
+            tagFileSelector.addEventListener('change', (e) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    tagVideo.src = event.target.result;
+                };
+
+                reader.readAsDataURL(e.target.files[0]);
+            });
+
+            tagPlaybackRate.addEventListener('change', (e) => {
+                tagVideo.playbackRate = e.target.value;
+                tagVideo.defaultPlaybackRate = e.target.value;
+            });
+        })();
+    </script>
+</body>
+
+</html>
