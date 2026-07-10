@@ -25,10 +25,25 @@
             background: #000;
         }
 
+        .video.is-hidden {
+            display: none;
+        }
+
+        .media-preview {
+            display: none;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .media-preview.active {
+            display: block;
+        }
+
         .video-frame {
             overflow: hidden;
             resize: both;
-            padding: 10px;
+            padding: 0;
             box-sizing: border-box;
             width: 100%;
             flex: 1 1 auto;
@@ -41,33 +56,52 @@
             outline: 4px dashed #3b82f6;
             background: rgba(59,130,246,0.04);
         }
+
+        #controls {
+            padding: 8px 10px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        #controls > div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #playbackRate {
+            margin-left: auto;
+        }
     </style>
 </head>
 
 <body>
     <div class="video-frame">
         <video id="video" class="video" loop controls></video>
+        <img id="mediaPreview" class="media-preview" alt="Selected image" />
     </div>
 
     <div id="controls">
         <div>
-            <input id="fileSelector" type="file" accept="video/*"/>
+            <input id="fileSelector" type="file" accept="video/*,image/*"/>
         </div>
 
-        再生速度
-        <select id="playbackRate">
-        <option value="0.5">0.5</option>
-        <option value="0.75">0.75</option>
-        <option value="1" selected>1</option>
-        <option value="1.25">1.25</option>
-        <option value="1.5">1.5</option>
-        <option value="2">2</option>
-    </select>
+        <div>
+            <label for="playbackRate">再生速度</label>
+            <select id="playbackRate">
+                <option value="0.5">0.5</option>
+                <option value="0.75">0.75</option>
+                <option value="1" selected>1</option>
+                <option value="1.25">1.25</option>
+                <option value="1.5">1.5</option>
+                <option value="2">2</option>
+            </select>
+        </div>
     </div>
-
-    <style>
-        #controls { padding:8px 10px; box-sizing:border-box; }
-    </style>
 
     <script>
         function formatVideoTime(time) {
@@ -79,14 +113,45 @@
 
         (() => {
             const tagVideo = document.getElementById('video');
+            const tagMediaPreview = document.getElementById('mediaPreview');
             const tagFileSelector = document.getElementById('fileSelector');
             const tagPlaybackRate = document.getElementById('playbackRate');
             const videoFrame = document.querySelector('.video-frame');
 
             let currentObjectUrl = null;
 
+            function getMediaKind(file) {
+                if (!file) return null;
+                const fileName = (file.name || '').toLowerCase();
+                const hasImageType = file.type.startsWith('image/') || /\.(png|jpe?g|gif|bmp|webp|svg)$/i.test(fileName);
+                const hasVideoType = file.type.startsWith('video/') || /\.(mp4|webm|ogg|mov|avi|mkv|m4v)$/i.test(fileName);
+                if (hasImageType) return 'image';
+                if (hasVideoType) return 'video';
+                return null;
+            }
+
+            function showVideo() {
+                tagVideo.controls = true;
+                tagVideo.classList.remove('is-hidden');
+                tagMediaPreview.classList.remove('active');
+                tagMediaPreview.hidden = true;
+                tagMediaPreview.removeAttribute('src');
+            }
+
+            function showImage(url, fileName) {
+                tagVideo.pause();
+                tagVideo.removeAttribute('src');
+                tagVideo.load();
+                tagVideo.classList.add('is-hidden');
+                tagMediaPreview.src = url;
+                tagMediaPreview.alt = fileName || 'Selected image';
+                tagMediaPreview.classList.add('active');
+                tagMediaPreview.hidden = false;
+            }
+
             function openFile(file) {
                 if (!file) return;
+                const mediaKind = getMediaKind(file);
                 try {
                     if (currentObjectUrl) {
                         URL.revokeObjectURL(currentObjectUrl);
@@ -96,10 +161,22 @@
                     console.error(e);
                 }
 
-                currentObjectUrl = URL.createObjectURL(file);
-                tagVideo.src = currentObjectUrl;
-                tagVideo.load();
-                tagVideo.play().catch(() => { });
+                if (mediaKind === 'image') {
+                    currentObjectUrl = URL.createObjectURL(file);
+                    showImage(currentObjectUrl, file.name);
+                    return;
+                }
+
+                if (mediaKind === 'video') {
+                    currentObjectUrl = URL.createObjectURL(file);
+                    tagVideo.src = currentObjectUrl;
+                    tagVideo.load();
+                    tagVideo.play().catch(() => { });
+                    showVideo();
+                    return;
+                }
+
+                showVideo();
             }
 
             tagFileSelector.addEventListener('change', (e) => {
